@@ -311,7 +311,7 @@ with top_right:
     # Spacer to align buttons slightly lower, matching the visual weight of the left side
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Navigation Buttons - Now 5 Columns to fit "PK Graph"
+    # Navigation Buttons - Now 5 Columns (Herb-Drug removed)
     # Added gap="medium" to space them out
     nav_btn1, nav_btn2, nav_btn3, nav_btn4, nav_btn5 = st.columns(
         5, gap="medium")
@@ -329,7 +329,6 @@ with top_right:
         if st.button("PK Calculator", use_container_width=True):
             st.session_state.current_view = "PK Calculator"
     with nav_btn5:
-        # NEW BUTTON FOR GRAPH
         if st.button("PK Graph", use_container_width=True):
             st.session_state.current_view = "PK Graph"
 
@@ -429,8 +428,8 @@ elif view_option == "PK Calculator":
         "Estimate missing parameters using standard one-compartment models.")
 
     # Create tabs for different calculators
-    tab1, tab2, tab3, tab4 = st.tabs(
-        ["Bioavailability (F)", "Cmin (Trough)", "Clearance (CL)", "Half-Life / ke"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+        ["Bioavailability (F)", "Cmin (Trough)", "Clearance (CL)", "Half-Life / ke", "Steady State", "Therapeutic Window"])
 
     # --- CALCULATOR 1: BIOAVAILABILITY ---
     with tab1:
@@ -445,19 +444,19 @@ elif view_option == "PK Calculator":
         with col1:
             st.markdown("**Oral Administration**")
             auc_oral = st.number_input(
-                "AUC (Oral)", min_value=0.0, value=0.0, step=0.1, help="Area Under the Curve for Oral Dose")
+                "AUC (Oral)", min_value=0.0, value=0.0, step=0.1, key="bio_auc_oral")
             dose_oral = st.number_input(
-                "Dose (Oral)", min_value=0.0, value=0.0, step=1.0)
+                "Dose (Oral)", min_value=0.0, value=0.0, step=1.0, key="bio_dose_oral")
 
         with col2:
             st.markdown("**IV Administration**")
             auc_iv = st.number_input(
-                "AUC (IV)", min_value=0.0, value=0.0, step=0.1)
+                "AUC (IV)", min_value=0.0, value=0.0, step=0.1, key="bio_auc_iv")
             dose_iv = st.number_input(
-                "Dose (IV)", min_value=0.0, value=0.0, step=1.0)
+                "Dose (IV)", min_value=0.0, value=0.0, step=1.0, key="bio_dose_iv")
 
         st.markdown("<br>", unsafe_allow_html=True)  # Extra spacing
-        if st.button("Calculate F", use_container_width=True):
+        if st.button("Calculate F", use_container_width=True, key="bio_calc_btn"):
             if dose_oral > 0 and auc_iv > 0 and dose_iv > 0:
                 # F = (AUC_oral * Dose_iv) / (AUC_iv * Dose_oral)
                 f_absolute = (auc_oral * dose_iv) / (auc_iv * dose_oral)
@@ -478,14 +477,14 @@ elif view_option == "PK Calculator":
             "Calculate the expected concentration at the end of a dosing interval based on the peak.")
 
         cmax = st.number_input("Cmax (Peak Concentration)",
-                               min_value=0.0, value=100.0)
+                               min_value=0.0, value=100.0, key="cmin_cmax")
         t_half = st.number_input(
-            "Half-Life (t½ in hours)", min_value=0.1, value=12.0)
+            "Half-Life (t½ in hours)", min_value=0.1, value=12.0, key="cmin_thalf")
         interval = st.number_input(
-            "Time since peak / Dosing Interval (hours)", min_value=0.0, value=24.0)
+            "Time since peak / Dosing Interval (hours)", min_value=0.0, value=24.0, key="cmin_interval")
 
         st.markdown("<br>", unsafe_allow_html=True)  # Extra spacing
-        if st.button("Calculate Cmin", use_container_width=True):
+        if st.button("Calculate Cmin", use_container_width=True, key="cmin_calc_btn"):
             if t_half > 0:
                 # Calculate elimination rate constant (k)
                 k = 0.693 / t_half
@@ -507,13 +506,13 @@ elif view_option == "PK Calculator":
 
         cl_dose = st.number_input(
             "Dose (mg)", min_value=0.0, value=500.0, key="cl_dose")
-        cl_f = st.number_input("Bioavailability (F) [0 to 1]", min_value=0.0,
-                               max_value=1.0, value=1.0, step=0.05, help="Use 1.0 for IV administration")
+        cl_f = st.number_input("Bioavailability (F) [0 to 1]", min_value=0.0, max_value=1.0,
+                               value=1.0, step=0.05, help="Use 1.0 for IV administration", key="cl_f")
         cl_auc = st.number_input(
             "AUC (mg·h/L)", min_value=0.0, value=100.0, key="cl_auc")
 
         st.markdown("<br>", unsafe_allow_html=True)  # Extra spacing
-        if st.button("Calculate CL", use_container_width=True):
+        if st.button("Calculate CL", use_container_width=True, key="cl_calc_btn"):
             if cl_auc > 0:
                 # CL = (F * Dose) / AUC
                 clearance = (cl_f * cl_dose) / cl_auc
@@ -529,29 +528,143 @@ elif view_option == "PK Calculator":
         st.latex(r"t_{1/2} = \frac{\ln(2)}{k_e} \approx \frac{0.693}{k_e}")
 
         calc_mode = st.radio("I want to calculate:", [
-                             "Half-Life (t½)", "Elimination Constant (k)"])
+                             "Half-Life (t½)", "Elimination Constant (k)"], key="hl_calc_mode")
 
         if calc_mode == "Half-Life (t½)":
             k_input = st.number_input(
-                "Enter Elimination Constant (k) [1/h]", min_value=0.0001, value=0.1, format="%.4f")
+                "Enter Elimination Constant (k) [1/h]", min_value=0.0001, value=0.1, format="%.4f", key="hl_k_input")
             st.markdown("<br>", unsafe_allow_html=True)  # Extra spacing
-            if st.button("Convert to t½", use_container_width=True):
+            if st.button("Convert to t½", use_container_width=True, key="hl_calc_btn1"):
                 t_half_calc = 0.693 / k_input
                 st.success(f"**Half-Life:** {t_half_calc:.2f} hours")
 
         else:
             t_input = st.number_input(
-                "Enter Half-Life (t½) [hours]", min_value=0.1, value=12.0)
+                "Enter Half-Life (t½) [hours]", min_value=0.1, value=12.0, key="hl_t_input")
             st.markdown("<br>", unsafe_allow_html=True)  # Extra spacing
-            if st.button("Convert to k", use_container_width=True):
+            if st.button("Convert to k", use_container_width=True, key="hl_calc_btn2"):
                 k_calc = 0.693 / t_input
                 st.success(f"**Elimination Constant (k):** {k_calc:.4f} /h")
+
+    # --- CALCULATOR 5: STEADY STATE ---
+    with tab5:
+        st.subheader("Steady State Simulator")
+        st.markdown(
+            "Estimate peak, trough, and average concentrations at steady state ($C_{ss}$).")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            ss_dose = st.number_input(
+                "Dose (mg)", min_value=0.0, value=100.0, key="ss_dose")
+            ss_interval = st.number_input(
+                "Dosing Interval (τ in hours)", min_value=1.0, value=24.0, key="ss_interval")
+        with col2:
+            ss_thalf = st.number_input(
+                "Half-Life (t½ in hours)", min_value=0.1, value=12.0, key="ss_thalf")
+            ss_vd = st.number_input(
+                "Volume of Distribution (Vd in L)", min_value=0.1, value=50.0, key="ss_vd")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Simulate Steady State", use_container_width=True, key="ss_calc_btn"):
+            if ss_thalf > 0 and ss_vd > 0:
+                k = 0.693 / ss_thalf
+
+                # Equations
+                # Cmax_ss = (Dose / Vd) * (1 / (1 - e^-kτ))
+                accumulation_factor = 1 / (1 - math.exp(-k * ss_interval))
+                cmax_ss = (ss_dose / ss_vd) * accumulation_factor
+                cmin_ss = cmax_ss * math.exp(-k * ss_interval)
+                cavg_ss = (ss_dose / ss_vd) / \
+                    (k * ss_interval)  # Or AUC_tau / tau
+
+                # Display Metrics
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Peak (Cmax,ss)", f"{cmax_ss:.2f} mg/L")
+                m2.metric("Trough (Cmin,ss)", f"{cmin_ss:.2f} mg/L")
+                m3.metric("Average (Cavg,ss)", f"{cavg_ss:.2f} mg/L")
+
+                # Plot Accumulation (5 Doses)
+                time_points = []
+                concs = []
+                current_conc = 0
+                total_time = ss_interval * 5
+
+                # Simplified Simulation Loop
+                sim_times = []
+                sim_concs = []
+                c = 0
+                for i in range(5):  # 5 doses
+                    # Instantaneous peak addition
+                    c += (ss_dose / ss_vd)
+
+                    # Decay over interval
+                    t_start = i * ss_interval
+                    for t_step in np.linspace(0, ss_interval, 20):
+                        sim_times.append(t_start + t_step)
+                        sim_concs.append(c * math.exp(-k * t_step))
+
+                    # Trough before next dose
+                    c = c * math.exp(-k * ss_interval)
+
+                chart_df = pd.DataFrame(
+                    {"Time (h)": sim_times, "Conc": sim_concs})
+
+                # Altair Chart
+                ss_chart = alt.Chart(chart_df).mark_line(color="#FFFFFF", strokeWidth=2).encode(
+                    x='Time (h)', y='Conc'
+                ).properties(background='#003366', height=300).configure_axis(
+                    labelColor='#FFFFFF', titleColor='#FFFFFF', gridColor='#406080'
+                ).configure_view(stroke=None)
+
+                st.altair_chart(ss_chart, use_container_width=True)
+                st.caption(
+                    "Simulation of accumulation over 5 dosing intervals.")
+
+            else:
+                st.error("Half-life and Vd must be > 0.")
+
+    # --- CALCULATOR 6: THERAPEUTIC WINDOW ---
+    with tab6:
+        st.subheader("Therapeutic Window Checker")
+        st.markdown(
+            "Check if a measured concentration falls within the safe therapeutic range.")
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            measured_conc = st.number_input(
+                "Measured Concentration", min_value=0.0, value=25.0, key="tw_measured")
+        with col2:
+            min_therapeutic = st.number_input(
+                "Min Therapeutic Level", min_value=0.0, value=10.0, key="tw_min")
+        with col3:
+            max_therapeutic = st.number_input(
+                "Max Therapeutic Level", min_value=0.0, value=30.0, key="tw_max")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Check Status", use_container_width=True, key="tw_check_btn"):
+            if measured_conc < min_therapeutic:
+                st.warning(
+                    f"⚠️ **Sub-therapeutic**: {measured_conc} is below the effective range ({min_therapeutic}-{max_therapeutic}).")
+            elif measured_conc > max_therapeutic:
+                st.error(
+                    f"🚨 **Toxic**: {measured_conc} is above the safe range ({min_therapeutic}-{max_therapeutic}).")
+            else:
+                st.success(
+                    f"✅ **Therapeutic**: {measured_conc} is within the target range ({min_therapeutic}-{max_therapeutic}).")
 
 # --- VIEW 5: PK GRAPH ---
 elif view_option == "PK Graph":
     st.header("Concentration-Time Graph")
 
     col1, col2 = st.columns([1, 2])
+
+    # Initialize calculation variables to ensure scope visibility
+    used_cmax = None
+    k = None
+    val_thalf = None
+    cmax_origin_text = "Reported"
+    calc_point = None  # Variable to store the calculated point for plotting
+    lod = 0.0  # Initialize LoD
 
     with col1:
         st.subheader("Select Drug")
@@ -596,28 +709,24 @@ elif view_option == "PK Graph":
             selected_graph_drug_label = st.selectbox(
                 "Choose a Drug to Plot:", list(drug_choices.keys()))
 
-        # ADDED: Plotting Mode Selection
+        # Plotting Mode Selection
         st.markdown("---")
         plot_source = st.radio("Source for Peak Concentration ($C_{max}$):",
                                ["Use Reported $C_{max}$", "Calculate from AUC ($C_0 = AUC \cdot k$)"])
 
         g_time = st.slider("Time Duration to Plot (hours)", 6, 72, 24)
 
-    with col2:
-        st.subheader("Elimination Curve")
+        # --- DATA EXTRACTION & PREPARATION (Happens in col1 for Calculator) ---
 
         if selected_graph_drug_label:
-            # Retrieve the correct row using the index map
             idx = drug_choices[selected_graph_drug_label]
             drug_row = df.loc[idx]
 
-            # Extract numerical values from strings (e.g. "12h" -> 12.0)
-            # Try finding a column that looks like "Cmax"
+            # Extract numerical values
             cmax_col = [c for c in df.columns if "cmax" in c.lower()][0] if [
                 c for c in df.columns if "cmax" in c.lower()] else "Cmax"
             half_life_col = [c for c in df.columns if "half" in c.lower(
             )][0] if [c for c in df.columns if "half" in c.lower()] else "Half-Life"
-            # Try finding AUC column
             auc_col = [c for c in df.columns if "auc" in c.lower()][0] if [
                 c for c in df.columns if "auc" in c.lower()] else "Area Under the Curve (AUC) [ng.hr/mL]"
 
@@ -631,55 +740,118 @@ elif view_option == "PK Graph":
 
                 # Determine Cmax based on user selection
                 used_cmax = val_cmax
-                cmax_origin_text = "Reported"
 
                 if "Calculate from AUC" in plot_source:
                     if val_auc:
                         used_cmax = val_auc * k
-                        cmax_origin_text = "Calculated from AUC"
+                        cmax_origin_text = "Calculated"
                     else:
                         st.warning(
-                            "⚠️ No valid AUC found for this drug. Using Reported Cmax instead.")
-                        # Fallback to reported
+                            "⚠️ No valid AUC found. Using Reported Cmax.")
+                        used_cmax = val_cmax
 
+                # --- QUICK CALCULATOR ---
                 if used_cmax and used_cmax > 0:
-                    # Generate data points
-                    time_points = np.linspace(0, g_time, num=100)
-                    concentrations = used_cmax * np.exp(-k * time_points)
+                    st.markdown("---")
+                    with st.expander("Quick Point Calculator", expanded=False):  # Emoji removed
+                        calc_tab1, calc_tab2 = st.tabs(
+                            ["Find Conc.", "Find Time"])
 
-                    # Create DataFrame for chart
-                    chart_data = pd.DataFrame({
-                        "Time (hours)": time_points,
-                        "Concentration (ng/mL)": concentrations
-                    })
+                        with calc_tab1:
+                            # Input: Time -> Output: Conc
+                            in_time = st.number_input(
+                                "Time (h)", min_value=0.0, value=val_thalf, step=1.0, key="calc_t")
+                            out_conc = used_cmax * np.exp(-k * in_time)
+                            st.markdown(f"**Conc:** `{out_conc:.2f} ng/mL`")
+                            calc_point = pd.DataFrame(
+                                {'Time (hours)': [in_time], 'Concentration (ng/mL)': [out_conc]})
 
-                    # Plot using Altair with Dark Blue theme
-                    chart = alt.Chart(chart_data).mark_line(color="#FFFFFF", strokeWidth=3).encode(
+                        with calc_tab2:
+                            # Input: Conc -> Output: Time
+                            in_conc = st.number_input(
+                                "Target Conc (ng/mL)", min_value=0.0, value=used_cmax/2, step=1.0, key="calc_c")
+                            if in_conc >= used_cmax:
+                                st.error(
+                                    f"Target must be < Peak ({used_cmax:.2f})")
+                            elif in_conc <= 0:
+                                st.error("Target must be > 0")
+                            else:
+                                out_time = -(1/k) * np.log(in_conc / used_cmax)
+                                st.markdown(
+                                    f"**Time:** `{out_time:.2f} hours`")
+                                calc_point = pd.DataFrame(
+                                    {'Time (hours)': [out_time], 'Concentration (ng/mL)': [in_conc]})
+
+                        # Add limit of detection (LoD) input inside calculator
+                        st.markdown("---")
+                        lod = st.number_input("Limit of Detection (LoD) [ng/mL]", min_value=0.0, value=0.0,
+                                              step=0.1, help="Show a horizontal line for the Limit of Detection", key="lod_input")
+
+    with col2:
+        st.subheader("Elimination Curve")
+
+        if selected_graph_drug_label:
+            if used_cmax and used_cmax > 0 and k:
+                # Generate data points
+                time_points = np.linspace(0, g_time, num=100)
+                concentrations = used_cmax * np.exp(-k * time_points)
+
+                # Create DataFrame for chart
+                chart_data = pd.DataFrame({
+                    "Time (hours)": time_points,
+                    "Concentration (ng/mL)": concentrations
+                })
+
+                # Base Line Chart
+                base_chart = alt.Chart(chart_data).mark_line(color="#FFFFFF", strokeWidth=3).encode(
+                    x='Time (hours)',
+                    y='Concentration (ng/mL)',
+                    tooltip=['Time (hours)', 'Concentration (ng/mL)']
+                )
+
+                final_chart = base_chart
+
+                # Add Point if calculator used
+                if calc_point is not None:
+                    point_chart = alt.Chart(calc_point).mark_circle(color="red", size=200, opacity=1).encode(
                         x='Time (hours)',
                         y='Concentration (ng/mL)',
                         tooltip=['Time (hours)', 'Concentration (ng/mL)']
-                    ).properties(
-                        background='#003366',  # Dark Blue background
-                        height=400
-                    ).configure_axis(
-                        labelColor='#FFFFFF',
-                        titleColor='#FFFFFF',
-                        gridColor='#406080',  # Lighter blue grid for contrast
-                        labelFontSize=12,
-                        titleFontSize=14,
-                        grid=True
-                    ).configure_view(
-                        stroke=None
                     )
+                    final_chart = final_chart + point_chart
 
-                    st.altair_chart(chart, use_container_width=True)
+                # Add LoD Line if set
+                if lod > 0:
+                    lod_df = pd.DataFrame({'y': [lod]})
+                    lod_line = alt.Chart(lod_df).mark_rule(color='#FFA500', strokeDash=[5, 5], strokeWidth=2).encode(
+                        y='y'
+                    )
+                    final_chart = final_chart + lod_line
 
-                    # Dynamic parameters display under graph
-                    st.markdown(
-                        f"**Plotting Parameters:** Cmax ({cmax_origin_text}) = {used_cmax:.2f}, Half-Life = {val_thalf}h")
-                else:
-                    st.error(
-                        "Invalid or missing Cmax value (Reported or Calculated). Cannot plot.")
-            else:
+                # Chart Properties
+                final_chart = final_chart.properties(
+                    background='#003366',  # Dark Blue background
+                    height=400
+                ).configure_axis(
+                    labelColor='#FFFFFF',
+                    titleColor='#FFFFFF',
+                    gridColor='#406080',  # Lighter blue grid for contrast
+                    labelFontSize=12,
+                    titleFontSize=14,
+                    grid=True
+                ).configure_view(
+                    stroke=None
+                )
+
+                st.altair_chart(final_chart, use_container_width=True)
+
+                # Dynamic parameters display under graph
+                st.markdown(
+                    f"**Plotting Parameters:** Cmax ({cmax_origin_text}) = {used_cmax:.2f} ng/mL, Half-Life = {val_thalf}h")
+
+            elif not val_thalf:
                 st.error(
                     "Could not extract valid numerical Half-Life for this drug to plot.")
+            else:
+                st.error(
+                    "Invalid or missing Cmax value (Reported or Calculated). Cannot plot.")
